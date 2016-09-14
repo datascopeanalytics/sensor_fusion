@@ -2,8 +2,9 @@ import math
 import random
 
 import numpy as np
-import seaborn as sns
 from matplotlib import pyplot as plt
+
+import seaborn as sns
 
 
 def generate(intersect, slope, sensor_sigma, occupant_range, occupant_sigma, datapoints=1000):
@@ -13,7 +14,7 @@ def generate(intersect, slope, sensor_sigma, occupant_range, occupant_sigma, dat
         'occupants': [],
         'reading': []}
 
-    for _ in xrange(datapoints):
+    for _ in range(datapoints):
         real_occupants = random.randrange(occupant_range + 1)
         noisy_occupants = max(0, random.gauss(real_occupants, occupant_sigma))
         reading = intersect + noisy_occupants * slope
@@ -80,15 +81,43 @@ def plot(data, sensor_model, filename):
         fit_reg=False
     )
     ax.plot(occupant_vector, fit_vector)
-    ax.fill_between(
-        occupant_vector,
-        fit_vector - sigma,
-        fit_vector + sigma,
-        alpha=0.3,
-        lw=0,
+    # ax.fill_between(
+    #     occupant_vector,
+    #     fit_vector - sigma,
+    #     fit_vector + sigma,
+    #     alpha=0.3,
+    #     lw=0,
+    # )
+
+    x_range = np.linspace(ax.get_xlim()[0], ax.get_xlim()[1], 50)
+    y_range = np.linspace(ax.get_ylim()[0], ax.get_ylim()[1], 50)
+
+    xx, yy = np.meshgrid(x_range, y_range)
+    zz = xx + yy
+
+    for i in range(len(x_range)):
+        for j in range(len(y_range)):
+            zz[j, i] = gaussian(yy[j, i], *sensor_model(xx[j, i]))
+
+    pal = sns.light_palette("green", as_cmap=True)
+    ax.contourf(
+        xx, yy, zz,
+        alpha=0.5,
+        cmap=pal,
+        antialiased=True,
+        levels=[
+            gaussian(3 * sigma, 0, sigma),
+            gaussian(2 * sigma, 0, sigma),
+            gaussian(sigma, 0, sigma),
+            gaussian(0, 0, sigma),
+        ]
     )
 
     plt.savefig(filename)
+
+
+def gaussian(x, mu, sig):
+    return np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.))) / (sig * np.sqrt(2. * np.pi))
 
 if __name__ == "__main__":
 
