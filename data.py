@@ -1,3 +1,4 @@
+import math
 import random
 
 import numpy as np
@@ -49,13 +50,19 @@ def fit(data):
 
     return sensor_model
 
-if __name__ == "__main__":
 
-    data = generate(350, 60, 10, 15, 5, 250)
+def round_up(number, scale):
+    return int(math.ceil(number / float(scale)) * scale)
+
+
+def round_down(number, scale):
+    return int(math.floor(number / float(scale)) * scale)
+
+
+def plot(data, sensor_model, filename):
     occupant_vector = np.array(
-        range(min(data["occupants"])-1, max(data["occupants"]) + 2)
+        range(min(data["occupants"]) - 1, max(data["occupants"]) + 2)
     )
-    sensor_model = fit(data)
     fit_vector = np.array([sensor_model(o)[0] for o in occupant_vector])
     _, sigma = sensor_model(occupant_vector[0])
     error_vector = [sigma] * len(occupant_vector)
@@ -63,7 +70,8 @@ if __name__ == "__main__":
     plt.cla()
     ax = plt.gca()
     ax.set_xlim([occupant_vector[0], occupant_vector[-1]])
-    ax.set_ylim([0,  2000])
+    ax.set_ylim([round_down(min(data["reading"]), 200),
+                 round_up(max(data["reading"]), 200)])
 
     ax = sns.regplot(
         x=np.array(data["occupants"]),
@@ -80,4 +88,10 @@ if __name__ == "__main__":
         lw=0,
     )
 
-    plt.savefig('test.pdf')
+    plt.savefig(filename)
+
+if __name__ == "__main__":
+
+    data = generate(350, 60, 10, 15, 5, 250)
+    sensor_model = fit(data)
+    plot(data, sensor_model, 'test.pdf')
