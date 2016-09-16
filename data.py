@@ -84,13 +84,6 @@ def plot_sensor_model(data, sensor_model, filename, round_level=10):
         fit_reg=False
     )
     ax.plot(occupant_vector, fit_vector)
-    # ax.fill_between(
-    #     occupant_vector,
-    #     fit_vector - sigma,
-    #     fit_vector + sigma,
-    #     alpha=0.3,
-    #     lw=0,
-    # )
 
     x_range = np.linspace(ax.get_xlim()[0], ax.get_xlim()[1], 100)
     y_range = np.linspace(ax.get_ylim()[0], ax.get_ylim()[1], 100)
@@ -103,18 +96,7 @@ def plot_sensor_model(data, sensor_model, filename, round_level=10):
             zz[j, i] = gaussian(yy[j, i], *sensor_model(xx[j, i]))
 
     pal = sns.light_palette("green", as_cmap=True)
-    # cs = ax.contourf(
-    #     xx, yy, zz,
-    #     alpha=0.5,
-    #     cmap=pal,
-    #     antialiased=True,
-    #     levels=[
-    #         gaussian(3 * sigma, 0, sigma),
-    #         gaussian(2 * sigma, 0, sigma),
-    #         gaussian(sigma, 0, sigma),
-    #         gaussian(0, 0, sigma),
-    #     ]
-    # )
+
 
     im = plt.imshow(zz,  interpolation='bilinear', origin='lower',
                     cmap=pal, alpha=0.5, aspect='auto',
@@ -132,7 +114,10 @@ def plot_sensor_model(data, sensor_model, filename, round_level=10):
     plt.savefig(filename)
 
 
-def plot_predictor(reading_range, predictor, filename, round_level=1):
+def plot_predictor(reading_range, predictor, filename, round_level=1, readings=[]):
+
+    palette = sns.color_palette()
+
     reading_vector = np.linspace(*reading_range)
     fit_vector = np.array([predictor(r)[0] for r in reading_vector])
     _, sigma = predictor(reading_vector[0])
@@ -144,7 +129,7 @@ def plot_predictor(reading_range, predictor, filename, round_level=1):
     ax.set_ylim([round_down(fit_vector[0], round_level),
                  round_up(fit_vector[-1], round_level)])
 
-    ax.plot(reading_vector, fit_vector)
+    ax.plot(reading_vector, fit_vector, color=palette[1])
 
     x_range = np.linspace(ax.get_xlim()[0], ax.get_xlim()[1], 100)
     y_range = np.linspace(ax.get_ylim()[0], ax.get_ylim()[1], 100)
@@ -155,6 +140,9 @@ def plot_predictor(reading_range, predictor, filename, round_level=1):
     for i in range(len(x_range)):
         for j in range(len(y_range)):
             zz[j, i] = gaussian(yy[j, i], *predictor(xx[j, i]))
+
+    if readings:
+        ax.vlines(readings, ax.get_ylim()[0], ax.get_ylim()[-1], linestyles='dotted')
 
     pal = sns.light_palette("green", as_cmap=True)
 
@@ -173,23 +161,44 @@ def plot_predictor(reading_range, predictor, filename, round_level=1):
                        '$\sigma$', 'max'], update_ticks=True)
     plt.savefig(filename)
 
-def plot_readings(reading_vector, predictor, filename, x_range=[0,15]):
+def plot_readings(reading_vector, predictor, filename, x_range=[0,15], fuse=False):
     plt.clf()
     ax = plt.gca()
     x_vector = np.linspace(*x_range)
+    palette = sns.color_palette()
+    fusion = None
     for reading in reading_vector:
         occupants, sigma = predictor(reading)
+        if fuse:
+            if not fusion:
+                fusion = occupants, sigma
+            else:
+                fusion = bayesian_update(fusion, (occupants, sigma))
         y_vector = 100*gaussian(x_vector, occupants, sigma)
-        ax.plot(x_vector, y_vector)
-        ax.plot(occupants, 0, 'o')
-        ax.vlines(occupants, 0, max(y_vector), linestyles='dotted')
+        ax.plot(x_vector, y_vector, color=palette[1])
+        ax.vlines(occupants, 0, max(y_vector), linestyles='dotted', label='{}ppm'.format(reading))
 
-    # ylim = ax.get_ylim()
-    # ax.set_ylim(0, ylim[-1])
+
+
+    if fuse:
+        y_vector = 100*gaussian(x_vector, *fusion)
+        ax.plot(x_vector, y_vector, color=palette[3])
+
+    ax.set_ylim(0, 20)
+    ax.set_xlim(*x_range)
     plt.savefig(filename)
 
 def gaussian(x, mu, sig):
     return np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.))) / (sig * np.sqrt(2. * np.pi))
+
+
+def bayesian_update(gaussian_a, gaussian_b):
+    mu_a, sigma_a = gaussian_a
+    mu_b, sigma_b = gaussian_b
+    mu = ((sigma_a**2)*mu_b + (sigma_b**2)*mu_a)/(sigma_a**2 + sigma_b**2)
+    sigma = np.sqrt(((sigma_a*sigma_b)**2)/(sigma_a**2 + sigma_b**2))
+
+    return mu, sigma
 
 if __name__ == "__main__":
 
@@ -197,10 +206,15 @@ if __name__ == "__main__":
     co2_sensor_model, co2_predictor = fit(co2_data)
     plot_sensor_model(co2_data, co2_sensor_model,
                       'co2_experiment.png', round_level=500)
-    plot_predictor([0, 1500], co2_predictor,
-                   'co2_predictor.png', round_level=10)
+    plot_predictor([0, 1500], co2_predictor, 'co2_predictor.png', round_level=10)
+    plot_predictor([0, 1500], co2_predictor, 'co2_predictor1.png', round_level=10, readings=[733])
+    plot_predictor([0, 1500], co2_predictor, 'co2_predictor2.png', round_level=10, readings=[733, 1037])
+    plot_predictor([0, 1500], co2_predictor, 'co2_predictor3.png', round_level=10, readings=[733, 790, 1037, 500, 699])
 
-    plot_readings([733], co2_predictor, 'co2_readings.png', x_range=[0, 15])
+    plot_readings([733], co2_predictor, 'co2_readings1.png', x_range=[0, 15])
+    plot_readings([733, 1037], co2_predictor, 'co2_readings2a.png', x_range=[0, 15], fuse=False)
+    plot_readings([733, 1037], co2_predictor, 'co2_readings2b.png', x_range=[0, 15], fuse=True)
+    plot_readings([733, 790, 1037, 500, 699], co2_predictor, 'co2_readings3.png', x_range=[0, 15], fuse=True)
 
     # temp_data = generate(19, 0.6, 0.5, 15, 5, 250)
     # temp_sensor_model = fit(temp_data)
