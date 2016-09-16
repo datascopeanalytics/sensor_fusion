@@ -204,8 +204,7 @@ if __name__ == "__main__":
 
     co2_data = generate(350, 60, 10, 15, 5, 250)
     co2_sensor_model, co2_predictor = fit(co2_data)
-    plot_sensor_model(co2_data, co2_sensor_model,
-                      'co2_experiment.png', round_level=500)
+    plot_sensor_model(co2_data, co2_sensor_model, 'co2_experiment.png', round_level=500)
     plot_predictor([0, 1500], co2_predictor, 'co2_predictor.png', round_level=10)
     plot_predictor([0, 1500], co2_predictor, 'co2_predictor1.png', round_level=10, readings=[733])
     plot_predictor([0, 1500], co2_predictor, 'co2_predictor2.png', round_level=10, readings=[733, 1037])
@@ -216,6 +215,7 @@ if __name__ == "__main__":
     plot_readings([733, 1037], co2_predictor, 'co2_readings2b.png', x_range=[0, 15], fuse=True)
     plot_readings([733, 790, 1037, 500, 699], co2_predictor, 'co2_readings3.png', x_range=[0, 15], fuse=True)
 
-    # temp_data = generate(19, 0.6, 0.5, 15, 5, 250)
-    # temp_sensor_model = fit(temp_data)
-    # plot(temp_data, temp_sensor_model, 'temp_experiment.png', round_level=5)
+    temp_data = generate(19, 0.6, 0.5, 15, 5, 250)
+    temp_sensor_model, temp_predictor = fit(temp_data)
+    plot_sensor_model(temp_data, temp_sensor_model, 'temp_experiment.png', round_level=5)
+    plot_predictor([10, 40], temp_predictor, 'temp_predictor.png', round_level=10)
