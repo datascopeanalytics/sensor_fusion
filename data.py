@@ -7,52 +7,71 @@ from matplotlib import pyplot as plt
 import seaborn as sns
 
 
-def generate(intersect, slope, sensor_sigma, occupant_range, occupant_sigma, datapoints=1000):
-    """Generates fake sensor data"""
+class Sensor(object):
 
-    fake_data = {
-        'occupants': [],
-        'reading': []}
+    def __init__(self, name, **kwargs):
+        self.name = name
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
-    for _ in range(datapoints):
-        real_occupants = random.randrange(occupant_range + 1)
-        noisy_occupants = max(0, random.gauss(real_occupants, occupant_sigma))
-        reading = intersect + noisy_occupants * slope
-        reading = random.gauss(reading, sensor_sigma)
-        fake_data['occupants'].append(real_occupants)
-        fake_data['reading'].append(reading)
+    def read(self, variable):
+        reading = self.intersect + variable * self.slope
+        return random.gauss(reading, self.sigma)
 
-    return fake_data
+    def fit(self, data):
+        slope, intercept = np.polyfit(
+            [o for o, r in data], [r for o, r in data], 1)
+        error = 0.0
+        n_samples = len(data)
+        for occupants, reading in data:
+            error += (occupants * slope + intercept - reading)**2
+
+        sigma = np.sqrt(error / (n_samples - 1))
+
+        def model(occupants):
+            return occupants * slope + intercept, sigma
+
+        def predictor(sensor_reading):
+            return (sensor_reading - intercept) / slope, sigma / slope
+
+        self.model = model
+        self.predictor = predictor
 
 
-def plot(data, filename):
-    plt.cla()
-    plt.scatter(x, y)
-    slope, intercept = np.polyfit(data["occupants"], data["reading"], 1)
-    occupant_range = np.array(
-        range(min(data["occupants"]), max(data["occupants"]))
-    )
-    fit = occupant_range * slope + intercept
-    plt.plot(occupant_range, fit)
+class TrainCar(object):
+
+    max_occupants = 120
+
+    def __init__(self, occupants=0):
+        self.sigma = self.max_occupants / 5
+        self.occupants = occupants
+        self.sensor_array = [
+            Sensor("co2", intersect=350, slope=15, sigma=10),
+            Sensor("temp", intersect=19, slope=0.6, sigma=0.5)
+        ]
+
+    def read_sensors(self):
+        reading_dict = {}
+        for sensor in self.sensor_array:
+            occupants = max(0, random.gauss(self.occupants, self.sigma))
+            reading_dict[sensor.name] = sensor.read(occupants)
+        return reading_dict
+
+    def run_experiment(self, datapoints=1000):
+        """Generates fake sensor data"""
+
+        data = []
+
+        for _ in range(datapoints):
+            self.occupants = random.randrange(self.max_occupants + 1)
+            data.append((self.occupants, self.read_sensors()))
+
+        for sensor in self.sensor_array:
+            sensor.fit([(o, r[sensor.name]) for o, r in data])
 
 
-def fit(data):
 
-    slope, intercept = np.polyfit(data["occupants"], data["reading"], 1)
-    error = 0.0
-    n_samples = len(data["occupants"])
-    for occupants, reading in zip(data["occupants"], data["reading"]):
-        error += (occupants * slope + intercept - reading)**2
-
-    sigma = np.sqrt(error / (n_samples - 1))
-
-    def sensor_model(occupants):
-        return occupants * slope + intercept, sigma
-
-    def predictor(sensor_reading):
-        return (sensor_reading - intercept) / slope, sigma / slope
-
-    return sensor_model, predictor
+        self.experiment_data = data
 
 
 def round_up(number, scale):
@@ -64,9 +83,9 @@ def round_down(number, scale):
 
 
 def plot_sensor_model(data, sensor_model, filename, round_level=10):
-    occupant_vector = np.array(
-        range(min(data["occupants"]) - 1, max(data["occupants"]) + 2)
-    )
+    x_array = np.array([o for o, r in data])
+    y_array = np.array([r for o, r in data])
+    occupant_vector = np.array( range(min(x_array) - 1, max(x_array) + 2) )
     fit_vector = np.array([sensor_model(o)[0] for o in occupant_vector])
     _, sigma = sensor_model(occupant_vector[0])
     error_vector = [sigma] * len(occupant_vector)
@@ -74,15 +93,10 @@ def plot_sensor_model(data, sensor_model, filename, round_level=10):
     plt.clf()
     ax = plt.gca()
     ax.set_xlim([occupant_vector[0], occupant_vector[-1]])
-    ax.set_ylim([round_down(min(data["reading"]), round_level),
-                 round_up(max(data["reading"]), round_level)])
+    ax.set_ylim([round_down(min(y_array), round_level),
+                 round_up(max(y_array), round_level)])
 
-    ax = sns.regplot(
-        x=np.array(data["occupants"]),
-        y=np.array(data["reading"]),
-        marker='x',
-        fit_reg=False
-    )
+    ax = sns.regplot( x=x_array, y=y_array, marker='x', fit_reg=False )
     ax.plot(occupant_vector, fit_vector)
 
     x_range = np.linspace(ax.get_xlim()[0], ax.get_xlim()[1], 100)
@@ -96,7 +110,6 @@ def plot_sensor_model(data, sensor_model, filename, round_level=10):
             zz[j, i] = gaussian(yy[j, i], *sensor_model(xx[j, i]))
 
     pal = sns.light_palette("green", as_cmap=True)
-
 
     im = plt.imshow(zz,  interpolation='bilinear', origin='lower',
                     cmap=pal, alpha=0.5, aspect='auto',
@@ -142,7 +155,8 @@ def plot_predictor(reading_range, predictor, filename, round_level=1, readings=[
             zz[j, i] = gaussian(yy[j, i], *predictor(xx[j, i]))
 
     if readings:
-        ax.vlines(readings, ax.get_ylim()[0], ax.get_ylim()[-1], linestyles='dotted')
+        ax.vlines(readings, ax.get_ylim()[
+                  0], ax.get_ylim()[-1], linestyles='dotted')
 
     pal = sns.light_palette("green", as_cmap=True)
 
@@ -161,7 +175,8 @@ def plot_predictor(reading_range, predictor, filename, round_level=1, readings=[
                        '$\sigma$', 'max'], update_ticks=True)
     plt.savefig(filename)
 
-def plot_readings(reading_vector, predictor, filename, x_range=[0,15], fuse=False):
+
+def plot_readings(reading_vector, predictor, filename, x_range=[0, 15], fuse=False):
     plt.clf()
     ax = plt.gca()
     x_vector = np.linspace(*x_range)
@@ -174,19 +189,19 @@ def plot_readings(reading_vector, predictor, filename, x_range=[0,15], fuse=Fals
                 fusion = occupants, sigma
             else:
                 fusion = bayesian_update(fusion, (occupants, sigma))
-        y_vector = 100*gaussian(x_vector, occupants, sigma)
+        y_vector = 100 * gaussian(x_vector, occupants, sigma)
         ax.plot(x_vector, y_vector, color=palette[1])
-        ax.vlines(occupants, 0, max(y_vector), linestyles='dotted', label='{}ppm'.format(reading))
-
-
+        ax.vlines(occupants, 0, max(y_vector), linestyles='dotted',
+                  label='{}ppm'.format(reading))
 
     if fuse:
-        y_vector = 100*gaussian(x_vector, *fusion)
+        y_vector = 100 * gaussian(x_vector, *fusion)
         ax.plot(x_vector, y_vector, color=palette[3])
 
-    ax.set_ylim(0, 20)
+    ax.set_ylim(0, 10)
     ax.set_xlim(*x_range)
     plt.savefig(filename)
+
 
 def gaussian(x, mu, sig):
     return np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.))) / (sig * np.sqrt(2. * np.pi))
@@ -195,27 +210,43 @@ def gaussian(x, mu, sig):
 def bayesian_update(gaussian_a, gaussian_b):
     mu_a, sigma_a = gaussian_a
     mu_b, sigma_b = gaussian_b
-    mu = ((sigma_a**2)*mu_b + (sigma_b**2)*mu_a)/(sigma_a**2 + sigma_b**2)
-    sigma = np.sqrt(((sigma_a*sigma_b)**2)/(sigma_a**2 + sigma_b**2))
+    mu = ((sigma_a**2) * mu_b + (sigma_b**2)
+          * mu_a) / (sigma_a**2 + sigma_b**2)
+    sigma = np.sqrt(((sigma_a * sigma_b)**2) / (sigma_a**2 + sigma_b**2))
 
     return mu, sigma
 
 if __name__ == "__main__":
 
-    co2_data = generate(350, 60, 10, 15, 5, 250)
-    co2_sensor_model, co2_predictor = fit(co2_data)
-    plot_sensor_model(co2_data, co2_sensor_model, 'co2_experiment.png', round_level=500)
-    plot_predictor([0, 1500], co2_predictor, 'co2_predictor.png', round_level=10)
-    plot_predictor([0, 1500], co2_predictor, 'co2_predictor1.png', round_level=10, readings=[733])
-    plot_predictor([0, 1500], co2_predictor, 'co2_predictor2.png', round_level=10, readings=[733, 1037])
-    plot_predictor([0, 1500], co2_predictor, 'co2_predictor3.png', round_level=10, readings=[733, 790, 1037, 500, 699])
+    train_car = TrainCar()
+    co2_sensor = train_car.sensor_array[0]
+    experiment_data = train_car.run_experiment(datapoints=250)
+    co2_data = [(o, r["co2"]) for o, r in experiment_data]
 
-    plot_readings([733], co2_predictor, 'co2_readings1.png', x_range=[0, 15])
-    plot_readings([733, 1037], co2_predictor, 'co2_readings2a.png', x_range=[0, 15], fuse=False)
-    plot_readings([733, 1037], co2_predictor, 'co2_readings2b.png', x_range=[0, 15], fuse=True)
-    plot_readings([733, 790, 1037, 500, 699], co2_predictor, 'co2_readings3.png', x_range=[0, 15], fuse=True)
+    # co2_data = generate(350, 60, 10, 15, 5, 250)
+    # co2_sensor_model, co2_predictor = fit(co2_data)
+    plot_sensor_model(co2_data, co2_sensor.model,
+                      'co2_experiment.png', round_level=500)
+    plot_predictor([0, 2500], co2_sensor.predictor,
+                   'co2_predictor.png', round_level=10)
+    plot_predictor([0, 2500], co2_sensor.predictor,
+                   'co2_predictor1.png', round_level=10, readings=[733])
+    plot_predictor([0, 2500], co2_sensor.predictor, 'co2_predictor2.png',
+                   round_level=10, readings=[733, 1037])
+    plot_predictor([0, 2500], co2_sensor.predictor, 'co2_predictor3.png',
+                   round_level=10, readings=[733, 790, 1037, 500, 699])
 
-    temp_data = generate(19, 0.6, 0.5, 15, 5, 250)
-    temp_sensor_model, temp_predictor = fit(temp_data)
-    plot_sensor_model(temp_data, temp_sensor_model, 'temp_experiment.png', round_level=5)
-    plot_predictor([10, 40], temp_predictor, 'temp_predictor.png', round_level=10)
+    plot_readings([733], co2_sensor.predictor, 'co2_readings1.png', x_range=[0, train_car.max_occupants])
+    plot_readings([733, 1037], co2_sensor.predictor,
+                  'co2_readings2a.png', x_range=[0, train_car.max_occupants], fuse=False)
+    plot_readings([733, 1037], co2_sensor.predictor,
+                  'co2_readings2b.png', x_range=[0, train_car.max_occupants], fuse=True)
+    plot_readings([733, 790, 1037, 500, 699], co2_sensor.predictor,
+                  'co2_readings3.png', x_range=[0, train_car.max_occupants], fuse=True)
+
+    # temp_data = generate(19, 0.6, 0.5, 15, 5, 250)
+    # temp_sensor_model, temp_predictor = fit(temp_data)
+    # plot_sensor_model(temp_data, temp_sensor_model,
+    #                   'temp_experiment.png', round_level=5)
+    # plot_predictor([10, 40], temp_predictor,
+    #                'temp_predictor.png', round_level=10)
