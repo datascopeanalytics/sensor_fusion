@@ -1,3 +1,6 @@
 numpy
 matplotlib
 seaborn
+ipywidgets
+ipdb
+ipython
