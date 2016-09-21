@@ -3,6 +3,7 @@ import random
 
 import numpy as np
 from matplotlib import pyplot as plt
+import matplotlib as mpl
 
 import seaborn as sns
 
@@ -58,7 +59,7 @@ class TrainCar(object):
         self.occupants = occupants
         self.sensor_array = [
             Sensor("co2", intersect=350, slope=15, sigma=10, round_level=500),
-            Sensor("temp", intersect=19, slope=0.6, sigma=0.5, round_level=10)
+            Sensor("temp", intersect=0, slope=0.25, sigma=2, round_level=10)
         ]
 
     def read_sensors(self):
@@ -77,22 +78,23 @@ class TrainCar(object):
             self.occupants = random.randrange(self.max_occupants + 1)
             data.append((self.occupants, self.read_sensors()))
 
-        for sensor in self.sensor_array:
+        for i, sensor in enumerate(self.sensor_array):
+            color = sns.color_palette()[i]
             sensor_data = [(o, r[sensor.name]) for o, r in data]
             sensor.fit(sensor_data)
-            f, (ax_left, ax_right) = plt.subplots(1, 2)
+            f, (ax_left, ax_right) = plt.subplots(nrows=1, ncols=2)
             occupants, readings = (np.array(array) for array in zip(*sensor_data))
             ax_left.set_xlim(min(occupants), max(occupants))
             ax_left.set_ylim(
                 sensor.round_down(min(readings)),
                 sensor.round_up(max(readings))
             )
-            ax_left.scatter(occupants, readings, marker='x')
+            ax_left.scatter(occupants, readings, lw=0, alpha=0.5, color=color)
             fit_line = [sensor.model(x) for x in self.occupant_range]
-            ax_left.plot(self.occupant_range, fit_line)
+            ax_left.plot(self.occupant_range, fit_line, color=color)
 
-            x_range = np.linspace(ax_left.get_xlim()[0], ax_left.get_xlim()[1], 100)
-            y_range = np.linspace(ax_left.get_ylim()[0], ax_left.get_ylim()[1], 100)
+            x_range = np.linspace(ax_left.get_xlim()[0], ax_left.get_xlim()[1], 10)
+            y_range = np.linspace(ax_left.get_ylim()[0], ax_left.get_ylim()[1], 10)
 
             xx, yy = np.meshgrid(x_range, y_range)
             zz = xx + yy
@@ -101,60 +103,64 @@ class TrainCar(object):
                 for j in range(len(y_range)):
                     zz[j, i] = gaussian(yy[j, i], sensor.model(xx[j, i]), sensor.model_sigma)
 
-            pal = sns.light_palette("green", as_cmap=True)
+            pal = sns.light_palette(color, as_cmap=True)
 
-            im = ax_left.imshow(zz,  interpolation='bilinear', origin='lower',
-                            cmap=pal, alpha=0.5, aspect='auto',
-                            extent=(x_range[0], x_range[-1], y_range[0], y_range[-1]))
-            cb = f.colorbar(im, orientation='vertical', ticks=[
+            im = ax_left.imshow(
+                zz, origin='lower', interpolation='bilinear',
+                cmap=pal, alpha=0.5, aspect='auto',
+                extent=(x_range[0], x_range[-1], y_range[0], y_range[-1])
+            )
+
+            cax, kw = mpl.colorbar.make_axes([ax_left, ax_right], location="bottom")
+            cbar = plt.colorbar(im, cax=cax, alpha=0.5, extend='neither', ticks=[
                 gaussian(3 * sensor.model_sigma, 0, sensor.model_sigma),
                 gaussian(2 * sensor.model_sigma, 0, sensor.model_sigma),
                 gaussian(sensor.model_sigma, 0, sensor.model_sigma),
                 gaussian(0, 0, sensor.model_sigma),
-            ],
-                drawedges=True
+            ], **kw)
+            # cbar.solids.set_edgecolor("face")
+
+            cbar.set_ticklabels(
+                ['$3 \sigma$', '$2 \sigma$', '$\sigma$', 'max'],
+                update_ticks=True
             )
-            cb.set_ticklabels(['$3 \sigma$', '$2 \sigma$',
-                               '$\sigma$', 'max'], update_ticks=True)
+
+            reading_vector = np.linspace(min(readings), max(readings))
+
+            # this is really stupid copy-pasta, needs to be undone, like yesterday
+            ax_right.set_ylim(min(occupants), max(occupants))
+            ax_right.set_xlim(
+                sensor.round_down(min(readings)),
+                sensor.round_up(max(readings))
+            )
+            ax_right.scatter(readings, occupants, lw=0, alpha=0.5, color=color)
+            fit_line = [sensor.predictor(x) for x in reading_vector]
+            ax_right.plot(reading_vector, fit_line, color=color)
+
+            x_range = np.linspace(ax_right.get_xlim()[0], ax_right.get_xlim()[1], 10)
+            y_range = np.linspace(ax_right.get_ylim()[0], ax_right.get_ylim()[1], 10)
+
+            xx, yy = np.meshgrid(x_range, y_range)
+            zz = xx + yy
+
+            for i in range(len(x_range)):
+                for j in range(len(y_range)):
+                    zz[j, i] = gaussian(yy[j, i], sensor.predictor(xx[j, i]), sensor.predictor_sigma)
+
+            pal = sns.light_palette(color, as_cmap=True)
+
+            im = ax_right.imshow(
+                zz, origin='lower', interpolation='bilinear',
+                cmap=pal, alpha=0.5, aspect='auto',
+                extent=(x_range[0], x_range[-1], y_range[0], y_range[-1])
+            )
+
 
             f.savefig("experiment_plots/"+sensor.name+".png")
 
+
         self.experiment_data = data
 
-
-
-
-def plot_sensor_model(data, sensor_model, filename, round_level=10):
-
-    # ax = sns.regplot(x=x_array, y=y_array, marker='x', fit_reg=False )
-    ax.plot(occupant_vector, fit_vector)
-
-    x_range = np.linspace(ax.get_xlim()[0], ax.get_xlim()[1], 100)
-    y_range = np.linspace(ax.get_ylim()[0], ax.get_ylim()[1], 100)
-
-    xx, yy = np.meshgrid(x_range, y_range)
-    zz = xx + yy
-
-    for i in range(len(x_range)):
-        for j in range(len(y_range)):
-            zz[j, i] = gaussian(yy[j, i], *sensor_model(xx[j, i]))
-
-    pal = sns.light_palette("green", as_cmap=True)
-
-    im = plt.imshow(zz,  interpolation='bilinear', origin='lower',
-                    cmap=pal, alpha=0.5, aspect='auto',
-                    extent=(x_range[0], x_range[-1], y_range[0], y_range[-1]))
-    cb = plt.colorbar(im, orientation='vertical', ticks=[
-        gaussian(3 * sigma, 0, sigma),
-        gaussian(2 * sigma, 0, sigma),
-        gaussian(sigma, 0, sigma),
-        gaussian(0, 0, sigma),
-    ],
-        drawedges=True
-    )
-    cb.set_ticklabels(['$3 \sigma$', '$2 \sigma$',
-                       '$\sigma$', 'max'], update_ticks=True)
-    plt.savefig(filename)
 
 
 def plot_predictor(reading_range, predictor, filename, round_level=1, readings=[]):
@@ -250,7 +256,7 @@ if __name__ == "__main__":
 
     train_car = TrainCar()
     co2_sensor = train_car.sensor_array[0]
-    # experiment_data = 
+    # experiment_data =
     train_car.run_experiment(datapoints=250)
     # co2_data = [(o, r["co2"]) for o, r in experiment_data]
 
