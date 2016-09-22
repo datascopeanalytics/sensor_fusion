@@ -7,6 +7,7 @@ from matplotlib import pyplot as plt
 
 import seaborn as sns
 import traces
+import scipy
 
 
 def plot_linear_fit(ax, x_array, y_array, fit_function, fit_sigma, color, cmap):
@@ -88,7 +89,8 @@ class Sensor(object):
         scale = float(self.round_level)
         return int(math.floor(reading / float(scale)) * scale)
 
-    def plot_experiment(self, color):
+    def plot_experiment(self):
+        color = self.color
         data = self.experiment_data
         cmap = sns.light_palette(color, as_cmap=True)
 
@@ -170,7 +172,8 @@ class TrainCar(object):
     def plot_experiment(self, **kwargs):
         for i, sensor in enumerate(self.sensor_array):
             color = sns.color_palette()[i]
-            sensor.plot_experiment(color)
+            sensor.color = color
+            sensor.plot_experiment()
 
     def run_experiment(self, datapoints=1000):
         """Generates fake sensor data"""
@@ -236,15 +239,23 @@ class Reading(object):
         self.timestamp = timestamp
         self.truth = truth
         self.value = sensor.read(truth)
+        self.mu = sensor.predictor(self.value)
+        self.sigma = sensor.predictor_sigma
+        self.color = sensor.color
 
     def plot(self, ax):
-        pass
+        x_range = np.arange(*ax.get_xlim(), 0.1)
+        y_vector = [100 * gaussian(x, self.mu, self.sigma) for x in x_range]
+        print(self.mu)
+        ax.plot(x_range, y_vector, color=self.color)
+        ax.vlines(self.mu, 0, max(y_vector), linestyles="dotted")
 
 
 class Estimate(object):
 
     def __init__(self):
         self.reading_vector = []
+        self.estimate = None
 
     def add_reading(self, reading_obj):
         self.reading_vector.append(reading_obj)
@@ -281,26 +292,9 @@ if __name__ == "__main__":
     plt.plot(time_array, co2_array)
     plt.savefig("co2.png")
 
-    # plot_predictor([0, 2500], co2_sensor.predictor,
-    #                'co2_predictor.png', round_level=10)
-    # plot_predictor([0, 2500], co2_sensor.predictor,
-    #                'co2_predictor1.png', round_level=10, readings=[733])
-    # plot_predictor([0, 2500], co2_sensor.predictor, 'co2_predictor2.png',
-    #                round_level=10, readings=[733, 1037])
-    # plot_predictor([0, 2500], co2_sensor.predictor, 'co2_predictor3.png',
-    #                round_level=10, readings=[733, 790, 1037, 500, 699])
-
-    # plot_readings([733], co2_sensor.predictor, 'co2_readings1.png', x_range=[0, train_car.max_occupants])
-    # plot_readings([733, 1037], co2_sensor.predictor,
-    #               'co2_readings2a.png', x_range=[0, train_car.max_occupants], fuse=False)
-    # plot_readings([733, 1037], co2_sensor.predictor,
-    #               'co2_readings2b.png', x_range=[0, train_car.max_occupants], fuse=True)
-    # plot_readings([733, 790, 1037, 500, 699], co2_sensor.predictor,
-    #               'co2_readings3.png', x_range=[0, train_car.max_occupants], fuse=True)
-
-    # temp_data = generate(19, 0.6, 0.5, 15, 5, 250)
-    # temp_sensor_model, temp_predictor = fit(temp_data)
-    # plot_sensor_model(temp_data, temp_sensor_model,
-    #                   'temp_experiment.png', round_level=5)
-    # plot_predictor([10, 40], temp_predictor,
-    #                'temp_predictor.png', round_level=10)
+    plt.clf()
+    ax = plt.gca()
+    ax.set_xlim(0, train_car.max_occupants)
+    reading = Reading(co2_sensor, 55)
+    reading.plot(ax)
+    plt.savefig("test.png")
