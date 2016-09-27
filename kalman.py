@@ -31,13 +31,6 @@ class Reading(Gaussian):
         self.mu = sensor.predictor(self.value)
         self.sigma = sensor.predictor_sigma
 
-    # def plot(self, ax):
-    #     x_range = np.arange(*ax.get_xlim(), 0.1)
-    #     y_vector = [100 * gaussian(x, self.mu, self.sigma) for x in x_range]
-    #     # print(self.mu)
-    #     ax.plot(x_range, y_vector, color=self.color)
-    #     ax.vlines(self.mu, 0, max(y_vector), linestyles="dotted")
-
 
 class Estimate(Gaussian):
 

@@ -9,15 +9,10 @@ class TrainCar(object):
     max_occupants = 120
     occupant_range = range(0, max_occupants + 1)
 
-    def __init__(self, occupants=0):
+    def __init__(self, occupants=0, sensor_array=[]):
         self.sigma = 0
         self.occupants = occupants
-        self.sensor_array = [
-            Sensor("co2", intersect=350, slope=15, sigma=10,
-                   round_level=500, proc_sigma=30),
-            Sensor("temp", intersect=0, slope=0.25,
-                   sigma=5, round_level=10, proc_sigma=5)
-        ]
+        self.sensor_array = sensor_array
 
     def generate_occupancy(self, start=0, end=30, stations=5):
         self.occupants_trace = traces.TimeSeries()
@@ -50,7 +45,7 @@ class TrainCar(object):
         for i, sensor in enumerate(self.sensor_array):
             color = sns.color_palette()[i]
             sensor.color = color
-            sensor.plot_experiment()
+            sensor.plot_experiment(**kwargs)
 
     def run_experiment(self, datapoints=1000):
         """Generates fake sensor data"""

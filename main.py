@@ -17,10 +17,18 @@ from sensor import Sensor
 
 if __name__ == "__main__":
 
-    train_car = TrainCar()
-    co2_sensor, temp_sensor = train_car.sensor_array
+    # create some crappy sensors
+    co2_sensor = Sensor("co2", intersect=350, slope=15, sigma=10, round_level=500, proc_sigma=30)
+    temp_sensor = Sensor("temp", intersect=0, slope=0.25, sigma=5, round_level=10, proc_sigma=5)
+
+    # put the sensors on a train car
+    train_car = TrainCar(sensor_array=[co2_sensor, temp_sensor])
+
+    # run some experiments to model/calibrate the sensors
     train_car.run_experiment(datapoints=250)
-    train_car.plot_experiment()
+    train_car.plot_experiment("experiment_plots")
+
+    # generate some "real" occupancy data
     train_car.generate_occupancy()  # defaults to 5 stations and 30 minutes
 
     time_array = np.arange(-1, 31, 1.0 / 60)

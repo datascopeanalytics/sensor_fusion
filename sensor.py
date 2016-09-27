@@ -80,7 +80,7 @@ class Sensor(object):
         scale = float(self.round_level)
         return int(math.floor(reading / float(scale)) * scale)
 
-    def plot_experiment(self):
+    def plot_experiment(self, path=""):
         color = self.color
         data = self.experiment_data
         cmap = sns.light_palette(color, as_cmap=True)
@@ -120,4 +120,4 @@ class Sensor(object):
             update_ticks=True
         )
 
-        fig.savefig("experiment_plots/" + self.name + ".png")
+        fig.savefig(os.path.join(path, self.name+".png"))
