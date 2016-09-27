@@ -4,3 +4,4 @@ seaborn
 ipywidgets
 ipdb
 ipython
+traces
