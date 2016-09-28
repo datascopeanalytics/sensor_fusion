@@ -1,3 +1,10 @@
+import random
+import os
+
+import numpy as np
+import seaborn as sns
+from matplotlib import pyplot as plt
+
 from utils import gaussian
 
 

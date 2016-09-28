@@ -1,6 +1,6 @@
 import numpy as np
 
-from utils import bayesian_update, gaussian
+from utils import gaussian
 
 
 class Gaussian(object):
@@ -18,6 +18,8 @@ class Gaussian(object):
         self.mu = ((self.sigma**2) * other.mu + (other.sigma**2) * self.mu) / sigma_sum
         self.sigma = np.sqrt(((self.sigma * other.sigma)**2) / sigma_sum)
 
+    def __float__(self):
+        return float(self.mu)
 
 class Reading(Gaussian):
 
@@ -30,6 +32,7 @@ class Reading(Gaussian):
 
         self.mu = sensor.predictor(self.value)
         self.sigma = sensor.predictor_sigma
+
 
 
 class Estimate(Gaussian):

@@ -1,9 +1,10 @@
 import random
 
 import traces
+import seaborn as sns
 
 from sensor import Sensor
-
+from kalman import Reading
 
 class TrainCar(object):
     max_occupants = 120
@@ -30,7 +31,6 @@ class TrainCar(object):
         return self.occupants_trace
 
     def read_sensors(self, experiment=True, timestamp=None):
-        reading_dict = {}
         for sensor in self.sensor_array:
             if experiment:
                 occupants = max(0, random.gauss(self.occupants, self.sigma))
@@ -38,8 +38,8 @@ class TrainCar(object):
                 occupants = self.occupants_trace[timestamp]
             else:
                 raise AttributeError("gimme some moneeey!")
-            reading_dict[sensor.name] = sensor.read(occupants)
-        return reading_dict
+            yield Reading(sensor, occupants, timestamp)
+
 
     def plot_experiment(self, **kwargs):
         for i, sensor in enumerate(self.sensor_array):
@@ -48,16 +48,11 @@ class TrainCar(object):
             sensor.plot_experiment(**kwargs)
 
     def run_experiment(self, datapoints=1000):
-        """Generates fake sensor data"""
+        """Generates fake sensor data and trains the sensor"""
 
-        data = []
-
-        for _ in range(datapoints):
-            self.occupants = random.randrange(self.max_occupants + 1)
-            data.append((self.occupants, self.read_sensors()))
-
-        for i, sensor in enumerate(self.sensor_array):
-            sensor_data = [(o, r[sensor.name]) for o, r in data]
+        for sensor in self.sensor_array:
+            sensor_data = []
+            for _ in range(datapoints):
+                self.occupants = random.randrange(self.max_occupants + 1)
+                sensor_data.append((self.occupants, sensor.read(self.occupants)))
             sensor.fit(sensor_data)
-
-        self.experiment_data = data
