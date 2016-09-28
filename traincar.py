@@ -17,13 +17,13 @@ class TrainCar(object):
 
     def generate_occupancy(self, start=0, end=30, stations=5):
         self.occupants_trace = traces.TimeSeries()
-        self.occupants_trace[start] = random.randint(
-            1, self.max_occupants / 2)
+        self.occupants_trace[start] = self.max_occupants / 2
         self.occupants_trace[end] = 0
 
         # at each station a certain number of people get on or off
-        for _ in range(stations):
-            minute = random.randint(start + 1, end - 1)
+        minute = start
+        while minute < end:
+            minute += random.gauss(float(end-start)/stations, 5)
             current_val = self.occupants_trace[minute]
             new_val = max(0, int(random.gauss(current_val, 20)))
             self.occupants_trace[minute] = new_val

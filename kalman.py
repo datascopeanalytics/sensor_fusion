@@ -21,6 +21,7 @@ class Gaussian(object):
     def __float__(self):
         return float(self.mu)
 
+
 class Reading(Gaussian):
 
     def __init__(self, sensor, truth, timestamp=None):
@@ -32,7 +33,6 @@ class Reading(Gaussian):
 
         self.mu = sensor.predictor(self.value)
         self.sigma = sensor.predictor_sigma
-
 
 
 class Estimate(Gaussian):

@@ -1,9 +1,10 @@
 import math
 import random
 from collections import defaultdict
+import copy
 
 import matplotlib as mpl
-import matplotlib.animation as animation
+import matplotlib.animation
 import numpy as np
 import scipy
 import seaborn as sns
@@ -15,35 +16,50 @@ from sensor import Sensor
 from traincar import TrainCar
 
 
-class SensorAnimation(animation.FuncAnimation):
-    def __init__(self, truth, reading_array):
+class SensorAnimation(matplotlib.animation.FuncAnimation):
+    def __init__(self, time_array, truth, reading_array, estimate_array):
         self.fig, self.ax = plt.subplots()
+        self.time_array = time_array
+        self.estimate_array = estimate_array
+
+        self.ax.set_xlim(0, 150)
+        self.ax.set_ylim(0, 50)
 
         self.truth = truth
         self.reading_array = reading_array
 
+        self.estimate_line = self.ax.plot([], [], color='purple', label='estimate')
+        self.lines = []
         for sensor in reading_array:
-            self.line = self.ax.plot([], [], color=sensor.color, label=sensor.name)
+            self.lines += self.ax.plot([], [], color=sensor.color, label=sensor.name)
 
         super().__init__(
             self.fig, self.update,
-            frames=200, init_function=self.init, blit=True
+            frames=len(time_array), init_func=self.init, blit=True
         )
 
-    def init():
+    def init(self):
         """Initializes the animation"""
-        self.lines = []
-        for sensor_name in self.reading_array:
-            self.lines.append()
-            self.line.set_data([], [])
-        return line,
+        self.ax.set_title("t=0s")
+        self.estimate_line[0].set_data([], [])
 
-    def update(i, truth, reading_array):
+        for line in self.lines:
+            line.set_data([], [])
+
+        return tuple(self.lines + self.estimate_line)
+
+    def update(self, i):
         """updates frame i of the animation"""
-        x = np.linspace(0, 2, 1000)
-        y = np.sin(2 * np.pi * (x - 0.01 * i))
-        line.set_data(x, y)
-        return line,
+        self.ax.set_title("t={}s".format(i))
+
+        estimate = self.estimate_array[i]
+        self.estimate_line[0].set_data(*estimate.vectorize(self.ax.get_xlim()))
+
+        for sensor, line in zip(self.reading_array.keys(), self.lines):
+            reading = self.reading_array.get(sensor)[i]
+            x, y = reading.vectorize(self.ax.get_xlim())
+            line.set_data(x, y)
+        return tuple(self.lines + self.estimate_line)
 
 
 if __name__ == "__main__":
@@ -64,12 +80,19 @@ if __name__ == "__main__":
     # generate some "real" occupancy data
     train_car.generate_occupancy()  # defaults to 5 stations and 30 minutes
 
-    time_array = np.arange(-1, 31, 1.0 / 60)
+    time_array = np.arange(-1, 30, 1.0 / 30)
     reading_array = defaultdict(list)
     truth = []
+    estimate_array = []
+    estimate = Estimate()
     for t in time_array:
-        for reading in train_car.read_sensors(timestamp=t):
+        for reading in train_car.read_sensors(experiment=False, timestamp=t):
             reading_array[reading.sensor].append(reading)
+            estimate.add_reading(reading)
+        estimate_array.append(copy.deepcopy(estimate))
+        # if the last point was in a station
+        if truth and train_car.occupants_trace[t] != truth[-1]:
+            estimate = Estimate()
         truth.append(train_car.occupants_trace[t])
 
     plt.clf()
@@ -82,20 +105,7 @@ if __name__ == "__main__":
 
     plt.clf()
 
-
-
-#     plt.clf()
-#     ax = plt.gca()
-#     ax.set_xlim(0, train_car.max_occupants)
-#     line, = ax.plot([], [], lw=2)
-#     estimate = Estimate(ax)
-#     reading = Reading(co2_sensor, 55)
-#     estimate.add_reading(reading)
-#     # estimate.plot(ax)
-#     # reading.plot(ax)
-#
-#     # plt.savefig("test.png")
-#
-
-#
-#
+    animation = SensorAnimation(
+        time_array, truth, reading_array, estimate_array
+    )
+    animation.save("test.mp4", fps=30)
