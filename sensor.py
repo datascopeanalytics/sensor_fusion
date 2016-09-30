@@ -1,9 +1,12 @@
 import random
 import os
+import copy
 
 import numpy as np
 import seaborn as sns
 from matplotlib import pyplot as plt
+from scipy.stats import linregress
+
 
 from utils import gaussian
 
@@ -46,11 +49,11 @@ class Sensor(object):
 
     def read(self, variable):
         variable = max(0, random.gauss(variable, self.proc_sigma))
-        reading = self.intersect + variable * self.slope
+        reading = variable * self.slope + self.intersect
         return random.gauss(reading, self.sigma)
 
     def fit(self, data):
-        self.experiment_data = data
+        self.experiment_data = copy.deepcopy(data)
         n_samples = len(data)
 
         model_slope, model_intercept = np.polyfit(
@@ -60,23 +63,15 @@ class Sensor(object):
             return occupants * model_slope + model_intercept
         self.model = model
 
-        error = 0.0
-        for occupants, reading in data:
-            error += (model(occupants) - reading)**2
-        sigma = np.sqrt(error / (n_samples - 1))
-        self.model_sigma = sigma
-
-        predictor_slope, predictor_intercept = np.polyfit(
-            [r for o, r in data], [o for o, r in data], 1)
-
         def predictor(sensor_reading):
-            return sensor_reading * predictor_slope + predictor_intercept
+            return (sensor_reading-model_intercept)/model_slope
         self.predictor = predictor
 
         error = 0.0
         for occupants, reading in data:
             error += (predictor(reading) - occupants)**2
         sigma = np.sqrt(error / (n_samples - 1))
+
         self.predictor_sigma = sigma
 
     def _round_up(self, reading):
@@ -105,6 +100,9 @@ class Sensor(object):
             color, cmap
         )
 
+        ax.set_xlabel("{} sensor readout ({})".format(self.name, self.units))
+        ax.set_ylabel("Number of train car occupants")
+        
         # cax, kw = mpl.colorbar.make_axes(
         # [ax_left, ax_right], location="bottom"
         # )

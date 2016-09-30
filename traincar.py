@@ -23,21 +23,17 @@ class TrainCar(object):
         # at each station a certain number of people get on or off
         minute = start
         while minute < end:
-            minute += random.gauss(float(end-start)/stations, 5)
+            minute += random.randint(5, 10)
             current_val = self.occupants_trace[minute]
-            new_val = max(0, int(random.gauss(current_val, 20)))
+            # new_val = max(0, int(random.gauss(current_val, 40)))
+            new_val = random.randint(0, self.max_occupants)
             self.occupants_trace[minute] = new_val
 
         return self.occupants_trace
 
-    def read_sensors(self, experiment=True, timestamp=None):
+    def read_sensors(self, timestamp):
         for sensor in self.sensor_array:
-            if experiment:
-                occupants = max(0, random.gauss(self.occupants, self.sigma))
-            elif timestamp:
-                occupants = self.occupants_trace[timestamp]
-            else:
-                raise AttributeError("gimme some moneeey!")
+            occupants = self.occupants_trace[timestamp]
             yield Reading(sensor, occupants, timestamp)
 
 
@@ -53,6 +49,6 @@ class TrainCar(object):
         for sensor in self.sensor_array:
             sensor_data = []
             for _ in range(datapoints):
-                self.occupants = random.randrange(self.max_occupants + 1)
-                sensor_data.append((self.occupants, sensor.read(self.occupants)))
+                occupants = random.randrange(self.max_occupants + 1)
+                sensor_data.append((occupants, sensor.read(occupants)))
             sensor.fit(sensor_data)
