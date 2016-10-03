@@ -74,14 +74,6 @@ class Sensor(object):
 
         self.predictor_sigma = sigma
 
-    def _round_up(self, reading):
-        scale = float(self.round_level)
-        return int(math.ceil(reading / float(scale)) * scale)
-
-    def _round_down(self, reading):
-        scale = float(self.round_level)
-        return int(math.floor(reading / float(scale)) * scale)
-
     def plot_experiment(self, path=""):
         color = self.color
         data = self.experiment_data
@@ -102,7 +94,7 @@ class Sensor(object):
 
         ax.set_xlabel("{} sensor readout ({})".format(self.name, self.units))
         ax.set_ylabel("Number of train car occupants")
-        
+
         # cax, kw = mpl.colorbar.make_axes(
         # [ax_left, ax_right], location="bottom"
         # )
@@ -125,4 +117,4 @@ class Sensor(object):
             update_ticks=True
         )
 
-        fig.savefig(os.path.join(path, self.name+".png"))
+        fig.savefig(os.path.join(path, self.name+".svg"))

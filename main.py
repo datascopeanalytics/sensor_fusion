@@ -119,7 +119,7 @@ if __name__ == "__main__":
     # generate some "real" occupancy data
     train_car.generate_occupancy()  # defaults to 5 stations and 30 minutes
 
-    time_array = np.arange(0, 15, 1.0 / 10)
+    time_array = np.arange(0, 30, 1.0 / 10)
     reading_array = defaultdict(list)
     truth = []
     estimate_array = []
@@ -143,7 +143,7 @@ if __name__ == "__main__":
     animation = SensorAnimation(
         time_array, truth, reading_array, estimate_array
     )
-    animation.save("test.mp4", fps=10, bitrate=1024)
+    animation.save("30minutes.mp4", fps=10, bitrate=1024)
 
     plt.clf()
     plt.xlabel("Number of people in the train car")
@@ -155,20 +155,20 @@ if __name__ == "__main__":
     plt.plot(*reading_1.vectorize((0,120)), color=co2_sensor.color, label="CO$_2$ sensor")
     plt.vlines(reading_1, 0, max(reading_1.vectorize((0,120))[1]), linestyles='dashed')
     plt.legend()
-    plt.savefig("reading_plots/1_co2.png")
+    plt.savefig("reading_plots/1_co2.svg")
 
     reading_2 = Reading(co2_sensor, 60)
     print("reading_2 = ", (reading_2.value, reading_2.mu))
     plt.plot(*reading_2.vectorize((0,120)), color=co2_sensor.color)
     plt.vlines(reading_2, 0, max(reading_2.vectorize((0,120))[1]), linestyles='dashed')
-    plt.savefig("reading_plots/2_co2.png")
+    plt.savefig("reading_plots/2_co2.svg")
 
     estimate = Estimate()
     estimate.add_reading(reading_1)
     estimate.add_reading(reading_2  )
     estimate_line = plt.plot(*estimate.vectorize((0,120)), color='purple', label="Estimate")
     plt.legend()
-    plt.savefig("reading_plots/3_co2.png")
+    plt.savefig("reading_plots/3_co2.svg")
 
     reading_3 = Reading(temp_sensor, 60)
     print("reading_3 = ", (reading_3.value, reading_3.mu))
@@ -178,4 +178,4 @@ if __name__ == "__main__":
     estimate_line[0].remove()
     estimate_line = plt.plot(*estimate.vectorize((0,120)), color='purple', label="Estimate")
     plt.legend()
-    plt.savefig("reading_plots/4_co2.png")
+    plt.savefig("reading_plots/4_co2.svg")
