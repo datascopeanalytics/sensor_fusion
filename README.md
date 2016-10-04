@@ -20,7 +20,7 @@ So, keeping this in mind, what could we do if we could measure or estimate the n
 In addition, the occupancy estimate could solve a personal pet peeve of mine: [the poop car](http://www.redeyechicago.com/redeye-avoiding-poop-winter-cta-20141117-story.html). This is a Chicago phenomenon that happens in the winter: you think you scored a nice, relatively empty car, at a busy time too! It looks almost too good to be true, and it turns out it is. The car is filled with some stench or another, making it nearly impossible to breathe, so much so that, at the next stop almost all riders get off and switch to other, more crowded cars, while a new set of &ldquo;suckers&rdquo; walks into the trap. Broad City illustrated this phenomenon admirably:
 
 <div style="text-align:center">
-<img alt="Broad City smells a poo" src="broad-city.gif" style="width:100%">
+<img alt="Broad City smells a poo" src="https://datascopeanalytics.com/blog/sensor-fusion-tutorial/broad-city.gif" style="width:100%">
 </div>
 
 Now, if we had a good estimate of the number of people in each car, we could easily see that one car is much emptier than the rest of the train, while the neighboring cars are fuller. For the Red Line in winter, that is a certain sign of either unbearable stench or some other, equally obnoxious problem.
@@ -53,7 +53,7 @@ co2_sensor.fit(sensor_data)
 
 Let&rsquo;s say we get a figure like this:
 
-![CO<sub>2</sub> sensor model](experiment_plots/co_2.svg)
+![CO<sub>2</sub> sensor model](https://datascopeanalytics.com/blog/sensor-fusion-tutorial/experiment_plots/co_2.svg)
 
 The above figure helps us build a sensor model for our particular car. A simple model fitting a line to the points in the figure tells us, for every given reading, how many people we expect to find in the room.[ref]Even though we use the model in a predictive fashion&mdash;given a reading, we look up the number of people that corresponds to that reading&mdash;we fit the line considering the number of occupants as the independent variable; doing it the other way around would generate a bad fit for our purposes[/ref]
 
@@ -61,17 +61,17 @@ We could stop here, report that number of people, and call it done. But we&rsquo
 
 Let&rsquo;s talk about what that means for a minute. Say we check our sensor and get a reading of 1092ppm (a number I obtained by randomly mashing my keyboard). We see that this corresponds, on average, to there being approximately 46 people in the train car, but it&rsquo;s pretty much just as likely that there are 40 or 50 of them. The car could even be empty&mdash;that option is still within two standard deviations of the mean.[ref]If you think that this is a simplistic model, that&rsquo;s because it is. This is more or less the smallest building block of sensor fusion theory, and like any &ldquo;smallest block&rdquo; it has its problems. For example, you might have noticed that there&rsquo;s a non-zero probability there are negative occupants in the room. While it&rsquo;s true that we can leverage this fact to get a better predictor, allowing negative values for people is not strictly detrimental, as we can think of that as &ldquo;the reading was so low, it was even *more* unlikely there was anyone there&rdquo;[/ref]
 
-![Sensor Fusion](reading_plots/1_co2.svg)
+![Sensor Fusion](https://datascopeanalytics.com/blog/sensor-fusion-tutorial/reading_plots/1_co2.svg)
 
 ## Multiple readings between stations
 
 Now that we have a sensor model, let&rsquo;s actually get some data! Let&rsquo;s start looking at what&rsquo;s happening in the car between two stations, something we can determine easily, either from an accelerometer on the car or from the great [train tracker app](http://www.transitchicago.com/traintracker/) CTA provides. The nice thing about the train between stations is that very few people change cars at that time (it is in fact illegal to do so). So, we can assume that the number of people in the car stays constant between measurements. We already have a sensor reading, so let&rsquo;s grab one more.
 
-![Sensor Fusion](reading_plots/2_co2.svg)
+![Sensor Fusion](https://datascopeanalytics.com/blog/sensor-fusion-tutorial/reading_plots/2_co2.svg)
 
 This one is centered somewhere around 46 people and has, unsurprisingly, the same standard deviation as the first reading&mdash;this is a side effect of our model. Now comes the fun part: we merge the two readings into one probability curve:
 
-![Sensor Fusion](reading_plots/3_co2.svg)
+![Sensor Fusion](https://datascopeanalytics.com/blog/sensor-fusion-tutorial/reading_plots/3_co2.svg)
 
 Mathematically, we multiply the two blue distributions and normalize the result as needed. Because our distributions are Gaussian this multiplication can be done analytically:
 $$\mu = \frac{\sigma_{p}^2\mu_{up}+\sigma_{up}^2\mu_{p}}{\sigma_{up}^2+\sigma_{p}^2}, \quad \sigma=\frac{\sigma_{up}^2\sigma_{p}^2}{\sigma_{up}^2+\sigma_{p}^2}$$
@@ -98,17 +98,17 @@ temp_sensor = Sensor(
 
 After doing the required experiments, the model for the temperature sensor looks like this :
 
-![Temperature.png](experiment_plots/Temperature.svg)
+![Temperature.png](https://datascopeanalytics.com/blog/sensor-fusion-tutorial/experiment_plots/Temperature.svg)
 
 Now, each measurement between the two stations could come from one sensor, or the other. Since we know how much to trust each sensor, we use the same method as before to fuse them together. The math does not change, since we&rsquo;re still multiplying Gaussians, and the same equations apply.
 
 The first temperature measurement, for example, would fuse with the other two measurements like this:
 
-![Sensor Fusion](reading_plots/4_co2.svg)
+![Sensor Fusion](https://datascopeanalytics.com/blog/sensor-fusion-tutorial/reading_plots/4_co2.svg)
 
 A 5 minute train ride might look like this, where the red line shows the true occupancy of the car:
 
-<video src="5minutes.webm" controls="" style="width:100%">
+<video src="https://datascopeanalytics.com/blog/sensor-fusion-tutorial/5minutes.webm" controls="" style="width:100%">
     A 5 minute train ride between only two stations.
 </video>
 
@@ -154,9 +154,9 @@ estimate=Estimate()
 # or
 estimate.sigma = None
 ```
-    However, as the train is moving between the stations we will be getting measurements again, and our estimation will narrow. Over several stations our estimate will look something like this:
+However, as the train is moving between the stations we will be getting measurements again, and our estimation will narrow. Over several stations our estimate will look something like this:
 
-<video src="30minutes.webm" controls="" style="width:100%">
+<video src="https://datascopeanalytics.com/blog/sensor-fusion-tutorial/30minutes.webm" controls="" style="width:100%">
     A 30 minute train ride between several stations.
 </video>
 
