@@ -165,7 +165,7 @@ if __name__ == "__main__":
 
     estimate = Estimate()
     estimate.add_reading(reading_1)
-    estimate.add_reading(reading_2  )
+    estimate.add_reading(reading_2)
     estimate_line = plt.plot(*estimate.vectorize((0,120)), color='purple', label="Estimate")
     plt.legend()
     plt.savefig("reading_plots/3_co2.svg")
